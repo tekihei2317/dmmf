@@ -1,0 +1,9 @@
+{
+  "devDependencies": {
+    "typescript": "^4.9.5"
+  },
+  "dependencies": {
+    "zod": "^3.20.6"
+  },
+  "license": "MIT"
+}

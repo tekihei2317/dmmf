@@ -25,7 +25,7 @@ type OrderQuantity = z.infer<typeof OrderQuantity>;
 
 type UnvalidatedAddress = undefined;
 type ValidatedAddress = undefined;
-type CheckAddressExists = (address: UnvalidatedAddress) => Result<ValidatedAddress, string>;
+type CheckAddressExists = (address: UnvalidatedAddress) => ResultAsync<ValidatedAddress, string>;
 
 type OrderForm = undefined;
 type CustomerInfo = undefined;
@@ -55,7 +55,7 @@ type ValidatedOrder = {
 
 type CheckProductCodeExists = (productCode: ProductCode) => boolean;
 
-// サブステップ: 注文を計算する
+// サブステップ: 注文を検証する
 export type ValidateOrder = (dependencies: {
   checkProductCodeExists: CheckProductCodeExists;
   checkAddressExists: CheckAddressExists;
@@ -88,6 +88,13 @@ type GetProductPrice = (code: ProductCode) => Price;
 // サブステップ: 注文の価格を計算する
 export type PriceOrder = (getProductPrice: GetProductPrice) => (order: UnvalidatedOrder) => PricedOrder;
 
+type OrderPlaced = PricedOrder;
+type BillableOrderPlaced = {
+  orderId: OrderId;
+  billingAddress: ValidatedAddress;
+  amountToBill: BillingAmount;
+};
+
 type HtmlString = string;
 type EmailAddress = string;
 
@@ -98,7 +105,7 @@ type OrderAcknowledgement = {
 
 type CreateOrderAcknowledgementLetter = (order: PricedOrder) => HtmlString;
 type SendResult = 'Sent' | 'NotSent';
-type SendOrderAcknowledgement = (acknowledgement: OrderAcknowledgement) => SendResult;
+type SendOrderAcknowledgement = (acknowledgement: OrderAcknowledgement) => Promise<SendResult>;
 
 type OrderAcknowledgementSent = {
   orderId: OrderId;
@@ -106,23 +113,18 @@ type OrderAcknowledgementSent = {
 };
 
 // サブステップ: 注文の確認を顧客に伝える
-type AcknowledgeOrder = (dependency: {
+type AcknowledgeOrder = (dependencies: {
   createOrderAcknowledgementLetter: CreateOrderAcknowledgementLetter;
   sendOrderAcknowledgement: SendOrderAcknowledgement;
-}) => (order: PricedOrder) => OrderAcknowledgementSent | undefined;
+}) => (order: PricedOrder) => Promise<OrderAcknowledgementSent | undefined>;
 
 type PlaceOrderInputs = {
   orderForm: OrderForm;
   productCatalog: ProductCatalog;
 };
 
-type PlaceOrderEvents = {
-  acknowledgementSent: undefined;
-  orderPlaced: undefined;
-  billableOrderPlaced: undefined;
-};
-
+type PlaceOrderEvent = OrderPlaced | BillableOrderPlaced | OrderAcknowledgementSent;
 type PlaceOrderError = ValidationError[];
 
 // ワークフロー: 注文する
-export type PlaceOrder = (input: PlaceOrderInputs) => ResultAsync<PlaceOrderEvents, PlaceOrderError>;
+export type PlaceOrder = (input: PlaceOrderInputs) => ResultAsync<PlaceOrderEvent[], PlaceOrderError>;

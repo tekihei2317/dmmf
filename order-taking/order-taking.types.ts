@@ -1,12 +1,16 @@
 import { z } from 'zod';
 import { Result, ResultAsync } from 'neverthrow';
+import { NonEmptyArray } from '../utils/type';
 
 type ValidationError = {
   field: string;
   description: string;
 };
 
-const WidgetCode = z.string().brand<'WidgetCode'>();
+const WidgetCode = z
+  .string()
+  .regex(/^W\d{4}$/)
+  .brand<'WidgetCode'>();
 const GizmoCode = z.string().brand<'GizmoCode'>();
 const ProductCode = z.union([WidgetCode, GizmoCode]);
 
@@ -16,11 +20,15 @@ const UnitQuantity = z.number().brand<'UnitQuantity'>();
 const KilogramQuantity = z.number().brand<'KilogramQuantity'>();
 const OrderQuantity = z.union([UnitQuantity, KilogramQuantity]);
 
+type UnitQuantity = z.infer<typeof UnitQuantity>;
 type OrderQuantity = z.infer<typeof OrderQuantity>;
+
+type UnvalidatedAddress = undefined;
+type ValidatedAddress = undefined;
+type CheckAddressExists = (address: UnvalidatedAddress) => Result<ValidatedAddress, string>;
 
 type OrderForm = undefined;
 type CustomerInfo = undefined;
-type Address = undefined;
 type BillingAmount = undefined;
 type ProductCatalog = undefined;
 
@@ -31,8 +39,8 @@ type UnvalidatedOrderLine = {
 
 type UnvalidatedOrder = {
   customerInfo: CustomerInfo;
-  shippingAddress: Address;
-  billingAddress: Address;
+  shippingAddress: UnvalidatedAddress;
+  billingAddress: UnvalidatedAddress;
   orderLines: UnvalidatedOrderLine[];
 };
 
@@ -40,13 +48,18 @@ type ValidatedOrderLine = UnvalidatedOrderLine;
 
 type ValidatedOrder = {
   customerInfo: CustomerInfo;
-  shippingAddress: Address;
-  billingAddress: Address;
-  orderLines: ValidatedOrderLine[];
+  shippingAddress: ValidatedAddress;
+  billingAddress: ValidatedAddress;
+  orderLines: NonEmptyArray<ValidatedOrderLine>;
 };
 
-// TODO: 商品コードの確認と、住所が存在するかの確認ができるようにする
-export type ValidateOrder = (order: UnvalidatedOrder) => ResultAsync<ValidatedOrder, ValidationError[]>;
+type CheckProductCodeExists = (productCode: ProductCode) => boolean;
+
+// サブステップ: 注文を計算する
+export type ValidateOrder = (dependencies: {
+  checkProductCodeExists: CheckProductCodeExists;
+  checkAddressExists: CheckAddressExists;
+}) => (order: UnvalidatedOrder) => ResultAsync<ValidatedOrder, ValidationError[]>;
 
 type OrderId = undefined;
 type OrderLineId = undefined;
@@ -61,24 +74,42 @@ type OrderLine = {
   price: Price;
 };
 
-type Order = {
+type PricedOrder = {
   id: OrderId;
   customerId: CustomerId;
-  shippingAddress: Address;
-  billingAddress: Address;
+  shippingAddress: ValidatedAddress;
+  billingAddress: ValidatedAddress;
   orderLines: OrderLine[];
   billingAmount: BillingAmount;
 };
 
-type CalculatePriceInput = {
-  form: OrderForm;
-  productCatalog: ProductCatalog;
+type GetProductPrice = (code: ProductCode) => Price;
+
+// サブステップ: 注文の価格を計算する
+export type PriceOrder = (getProductPrice: GetProductPrice) => (order: UnvalidatedOrder) => PricedOrder;
+
+type HtmlString = string;
+type EmailAddress = string;
+
+type OrderAcknowledgement = {
+  emailAddress: EmailAddress;
+  letter: HtmlString;
 };
 
-type CalculatePriceError = undefined;
+type CreateOrderAcknowledgementLetter = (order: PricedOrder) => HtmlString;
+type SendResult = 'Sent' | 'NotSent';
+type SendOrderAcknowledgement = (acknowledgement: OrderAcknowledgement) => SendResult;
 
-// TODO: 商品カタログの代わりに、商品の価格を取得する関数を使う
-export type CalculatePrice = (input: CalculatePriceInput) => Result<Order, CalculatePriceError>;
+type OrderAcknowledgementSent = {
+  orderId: OrderId;
+  emailAddress: EmailAddress;
+};
+
+// サブステップ: 注文の確認を顧客に伝える
+type AcknowledgeOrder = (dependency: {
+  createOrderAcknowledgementLetter: CreateOrderAcknowledgementLetter;
+  sendOrderAcknowledgement: SendOrderAcknowledgement;
+}) => (order: PricedOrder) => OrderAcknowledgementSent | undefined;
 
 type PlaceOrderInputs = {
   orderForm: OrderForm;
@@ -93,4 +124,5 @@ type PlaceOrderEvents = {
 
 type PlaceOrderError = ValidationError[];
 
+// ワークフロー: 注文する
 export type PlaceOrder = (input: PlaceOrderInputs) => ResultAsync<PlaceOrderEvents, PlaceOrderError>;

@@ -7,6 +7,11 @@ neverthrow@^6.0.0:
   resolved "https://registry.yarnpkg.com/neverthrow/-/neverthrow-6.0.0.tgz#bacd7661cade296ccc5c35760bb3b679214155b6"
   integrity sha512-kPZKRs4VkdloCGQXPoP84q4sT/1Z+lYM61AXyV8wWa2hnuo5KpPBF2S3crSFnMrOgUISmEBP8Vo/ngGZX60NhA==
 
+ts-array-length@^0.1.2:
+  version "0.1.2"
+  resolved "https://registry.yarnpkg.com/ts-array-length/-/ts-array-length-0.1.2.tgz#72efc8baf03830c5dc4c114fa995633f1bccda2a"
+  integrity sha512-x/e5IkAhltwO/O9RZU4MQXlu8cAY9NJH6vwv53FgjK4Bmvwim3Ll6z5XB5xbP79v8Yu3g/fMI5sK42JKKEDudA==
+
 typescript@^4.9.5:
   version "4.9.5"
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-4.9.5.tgz#095979f9bcc0d09da324d58d03ce8f8374cbe65a"

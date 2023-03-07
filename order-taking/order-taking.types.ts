@@ -135,4 +135,10 @@ export type PlaceOrderEvent = OrderPlaced | BillableOrderPlaced | OrderAcknowled
 type PlaceOrderError = ValidationError[];
 
 // ワークフロー: 注文する
-export type PlaceOrder = (input: PlaceOrderInputs) => ResultAsync<PlaceOrderEvent[], PlaceOrderError>;
+export type PlaceOrder = (dependencies: {
+  checkProductCodeExists: CheckProductCodeExists;
+  checkAddressExists: CheckAddressExists;
+  getProductPrice: GetProductPrice;
+  createOrderAcknowledgementLetter: CreateOrderAcknowledgementLetter;
+  sendOrderAcknowledgement: SendOrderAcknowledgement;
+}) => (unvalidatedOrder: UnvalidatedOrder) => PlaceOrderEvent[];

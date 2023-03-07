@@ -14,6 +14,7 @@ import {
   OrderAcknowledgementSent,
   BillableOrderPlaced,
   PlaceOrderEvent,
+  UnvalidatedOrder,
 } from './order-taking.types';
 
 function multiplyPrice(price: Price, quantity: number): Price {
@@ -104,13 +105,14 @@ export function acknowledgeOrder({
       letter,
     });
 
-    if (sendResult === 'Sent') {
-      return {
-        emailAddress: order.customerInfo.emailAddress,
-        orderId: order.id,
-      };
-    } else {
-      return undefined;
+    switch (sendResult) {
+      case 'Sent':
+        return {
+          emailAddress: order.customerInfo.emailAddress,
+          orderId: order.id,
+        };
+      case 'NotSent':
+        return undefined;
     }
   }
 
@@ -139,4 +141,22 @@ function createEvents(
   return [order, ...optionToArray(acknowledgementEvent), ...optionToArray(createBillingEvent(order))];
 }
 
-export function placeOrder({ orderForm, productCatalog }: FirstParameter<PlaceOrder>): ReturnType<PlaceOrder> {}
+type PlaceOrderInner = ReturnType<PlaceOrder>;
+
+export function placeOrder({
+  checkProductCodeExists,
+  checkAddressExists,
+  getProductPrice,
+  createOrderAcknowledgementLetter,
+  sendOrderAcknowledgement,
+}: FirstParameter<PlaceOrder>): PlaceOrderInner {
+  return function (unvalidatedOrder: UnvalidatedOrder): PlaceOrderEvent[] {
+    const validatedOrder = validateOrder({ checkProductCodeExists, checkAddressExists })(unvalidatedOrder);
+    const pricedOrder = priceOrder(getProductPrice)(validatedOrder);
+    const acknowledgementEventOpt = acknowledgeOrder({ createOrderAcknowledgementLetter, sendOrderAcknowledgement })(
+      pricedOrder
+    );
+
+    return createEvents(pricedOrder, acknowledgementEventOpt);
+  };
+}

@@ -25,71 +25,79 @@ type OrderQuantity = z.infer<typeof OrderQuantity>;
 
 type UnvalidatedAddress = undefined;
 type ValidatedAddress = undefined;
-type CheckAddressExists = (address: UnvalidatedAddress) => ResultAsync<ValidatedAddress, string>;
+type CheckAddressExists = (address: UnvalidatedAddress) => ValidatedAddress;
 
 type OrderForm = undefined;
-type CustomerInfo = undefined;
-type BillingAmount = undefined;
+type PersonName = {
+  firstName: string;
+  lastName: string;
+};
+type CustomerInfo = {
+  name: PersonName;
+  emailAddress: EmailAddress;
+};
+export type Price = number;
+type BillingAmount = Price;
 type ProductCatalog = undefined;
 
-type UnvalidatedOrderLine = {
+export type UnvalidatedOrderLine = {
   productCode: ProductCode;
   quantity: OrderQuantity;
 };
 
-type UnvalidatedOrder = {
+export type UnvalidatedOrder = {
   customerInfo: CustomerInfo;
   shippingAddress: UnvalidatedAddress;
   billingAddress: UnvalidatedAddress;
   orderLines: UnvalidatedOrderLine[];
 };
 
-type ValidatedOrderLine = UnvalidatedOrderLine;
+export type ValidatedOrderLine = UnvalidatedOrderLine;
 
-type ValidatedOrder = {
+export type ValidatedOrder = {
   customerInfo: CustomerInfo;
   shippingAddress: ValidatedAddress;
   billingAddress: ValidatedAddress;
   orderLines: NonEmptyArray<ValidatedOrderLine>;
 };
 
-type CheckProductCodeExists = (productCode: ProductCode) => boolean;
+export type CheckProductCodeExists = (productCode: ProductCode) => boolean;
 
 // サブステップ: 注文を検証する
 export type ValidateOrder = (dependencies: {
   checkProductCodeExists: CheckProductCodeExists;
   checkAddressExists: CheckAddressExists;
-}) => (order: UnvalidatedOrder) => ResultAsync<ValidatedOrder, ValidationError[]>;
+}) => (order: UnvalidatedOrder) => ValidatedOrder;
 
 type OrderId = undefined;
 type OrderLineId = undefined;
 type CustomerId = undefined;
-type Price = undefined;
 
-type OrderLine = {
-  id: OrderLineId;
-  orderId: OrderId;
+export type PricedOrderLine = {
+  // id: OrderLineId;
+  // orderId: OrderId;
   productCode: ProductCode;
   quantity: OrderQuantity;
   price: Price;
+  // linePrice: Price;
 };
 
-type PricedOrder = {
+export type PricedOrder = {
   id: OrderId;
-  customerId: CustomerId;
+  customerInfo: CustomerInfo;
   shippingAddress: ValidatedAddress;
   billingAddress: ValidatedAddress;
-  orderLines: OrderLine[];
+  orderLines: PricedOrderLine[];
   billingAmount: BillingAmount;
 };
 
 type GetProductPrice = (code: ProductCode) => Price;
 
 // サブステップ: 注文の価格を計算する
-export type PriceOrder = (getProductPrice: GetProductPrice) => (order: UnvalidatedOrder) => PricedOrder;
+export type PriceOrder = (getProductPrice: GetProductPrice) => (order: ValidatedOrder) => PricedOrder;
 
 type OrderPlaced = PricedOrder;
-type BillableOrderPlaced = {
+export type BillableOrderPlaced = {
   orderId: OrderId;
   billingAddress: ValidatedAddress;
   amountToBill: BillingAmount;
@@ -105,25 +113,25 @@ type OrderAcknowledgement = {
 
 type CreateOrderAcknowledgementLetter = (order: PricedOrder) => HtmlString;
 type SendResult = 'Sent' | 'NotSent';
-type SendOrderAcknowledgement = (acknowledgement: OrderAcknowledgement) => Promise<SendResult>;
+type SendOrderAcknowledgement = (acknowledgement: OrderAcknowledgement) => SendResult;
 
-type OrderAcknowledgementSent = {
+export type OrderAcknowledgementSent = {
   orderId: OrderId;
   emailAddress: EmailAddress;
 };
 
 // サブステップ: 注文の確認を顧客に伝える
-type AcknowledgeOrder = (dependencies: {
+export type AcknowledgeOrder = (dependencies: {
   createOrderAcknowledgementLetter: CreateOrderAcknowledgementLetter;
   sendOrderAcknowledgement: SendOrderAcknowledgement;
-}) => (order: PricedOrder) => Promise<OrderAcknowledgementSent | undefined>;
+}) => (order: PricedOrder) => OrderAcknowledgementSent | undefined;
 
 type PlaceOrderInputs = {
   orderForm: OrderForm;
   productCatalog: ProductCatalog;
 };
 
-type PlaceOrderEvent = OrderPlaced | BillableOrderPlaced | OrderAcknowledgementSent;
+export type PlaceOrderEvent = OrderPlaced | BillableOrderPlaced | OrderAcknowledgementSent;
 type PlaceOrderError = ValidationError[];
 
 // ワークフロー: 注文する
